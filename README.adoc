@@ -1,0 +1,3 @@
+# Core Kubernetes
+
+Source code for Manning Book - Core Kubernetes.
