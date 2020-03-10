@@ -1,0 +1,57 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: example-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 10Mi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-script
+data:
+  script.sh: |
+    #!/bin/sh
+    target_dir=$1
+    counter=1
+    while [ "$counter" -gt 0 ]; do
+      touch ${target_dir}/${counter}.txt
+      counter=$(($counter + 1))
+      sleep 3
+    done
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-app
+spec:
+  containers:
+  - name: data-gen
+    image: alpine
+    resources:
+      limits:
+        cpu: "50m"
+    command:
+      - sh
+    args:
+      - script.sh
+      - /data
+    workingDir: /opt
+    volumeMounts:
+      - name: test-script
+        mountPath: /opt
+      - name: storage-volume
+        mountPath: /data
+  volumes:
+    - name: test-script
+      configMap:
+        name: test-script
+    - name: storage-volume
+      persistentVolumeClaim:
+        claimName: example-claim

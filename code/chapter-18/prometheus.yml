@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+  namespace: kube-system
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - port: 9090
+      targetPort: 9090
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd-service
+  namespace: kube-system
+spec:
+  selector:
+    component: etcd
+  ports:
+    - port: 2379
+      targetPort: 2379
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-conf
+  namespace: kube-system
+  labels:
+    name: prometheus-conf
+data:
+  prometheus.yml: |-
+    global:
+      scrape_interval: 2s
+    scrape_configs:
+    - job_name: prometheus
+      static_configs:
+      - targets:
+        - 'etcd-service:2379'
+      scheme: https
+      tls_config:
+        ca_file: /etc/kubernetes/pki/etcd/ca.crt
+        cert_file: /etc/kubernetes/pki/etcd/healthcheck-client.crt
+        key_file: /etc/kubernetes/pki/etcd/healthcheck-client.key
+        insecure_skip_verify: True
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      initContainers:
+        - name: prometheus-init
+          image: alpine
+          volumeMounts:
+            - mountPath: /etc/kubernetes/pki/etcd
+              name: etcd-certs
+          command:
+            - chmod
+            - ugo+r
+            - "-R"
+            - /etc/kubernetes/pki/etcd
+          securityContext:
+            privileged: True
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.2.1
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: prometheus-config
+              mountPath: /etc/prometheus/
+            - mountPath: /etc/kubernetes/pki/etcd
+              name: etcd-certs
+      volumes:
+        - name: prometheus-config
+          configMap:
+            name: prometheus-conf
+        - hostPath:
+            path: /etc/kubernetes/pki/etcd
+            type: DirectoryOrCreate
+          name: etcd-certs
+---

@@ -1,0 +1,14 @@
+[
+    {
+        "op": "replace",
+        "path": "/spec/template/spec/volumes",
+        "value": [
+            {
+                "name": "export-volume",
+                "persistentVolumeClaim": {
+                    "claimName": "nfs-claim"
+                }
+            }
+        ]
+    }
+]

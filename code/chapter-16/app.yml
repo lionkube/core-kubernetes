@@ -1,0 +1,26 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: httpd
+  labels:
+    app: webserver
+spec:
+  containers:
+  - name: httpd
+    image: httpd
+    ports:
+    - containerPort: 80
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shell-pod
+spec:
+  containers:
+  - name: shell-pod
+    image: alpine
+    command:
+      - tail
+      - -f
+      - /dev/null
